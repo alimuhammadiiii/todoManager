@@ -4,20 +4,20 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useSetDataUser } from "../components/useUserInfo";
 import { User } from "./SignUp";
 
 function Login() {
   const [loginForm, setLoginForm] = useState<User>({ username: "", password: "" });
   const navigate = useNavigate();
-  const username = useSetDataUser();
-
   const mutation = useMutation({
     mutationFn: async (userInfo: User) => {
-      return (await axios.post("http://localhost:3000/sign-in", userInfo)).data as Promise<User>;
+      return (
+        await axios.post("/api/sign-in", userInfo, {
+          withCredentials: true,
+        })
+      ).data as Promise<User>;
     },
     onSuccess() {
-      username(loginForm.username);
       setLoginForm({ username: "", password: "" });
       navigate("/home");
       toast.success("Login success");
@@ -62,7 +62,6 @@ function Login() {
   );
 
   function handleLogin() {
-    console.log(loginForm);
     mutation.mutate(loginForm);
   }
 }
