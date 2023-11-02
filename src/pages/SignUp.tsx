@@ -4,23 +4,20 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Username, useSetDataUser } from "../components/useUserInfo";
+
 export type User = {
-  username: Username;
+  username: string;
   password: string;
 };
 
 export default function SignUp() {
   const [user, setUser] = useState<User>({ username: "", password: "" });
   const navigate = useNavigate();
-  const setData = useSetDataUser();
   const mutation = useMutation({
     mutationFn: async (userInfo: User) => {
-      return (await axios.post("http://localhost:3000/sign-up", userInfo)).data as Promise<User>;
+      return (await axios.post("api/sign-up", userInfo)).data as Promise<User>;
     },
-    onSuccess: (userInfo: User) => {
-      console.log(userInfo);
-      setData(user.username);
+    onSuccess: () => {
       toast.success("ثبت نام موفقیت امیز بود");
       setUser({ username: "", password: "" });
       navigate("/home");
