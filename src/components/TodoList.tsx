@@ -1,37 +1,41 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
-import axios, { AxiosError } from "axios";
-import { useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import Todo from "./Todo";
+import { useListData } from "../hooks/useLlistData";
+import { useTodoMutation } from "../hooks/useTodo";
 
-type Todo = {
-  listId: string;
+export type TodoType = {
+  id: string | undefined;
+  listId: string | undefined;
   content: string;
   completed: boolean;
   bookmarked: boolean;
+  createdAt: string | undefined;
+  modifiedAt: string | undefined;
 };
-function TodoList() {
+
+export default function TodoList() {
   const [todoText, setTodo] = useState<string>("");
-  const nav = useNavigate();
-  const mutation = useMutation({
-    mutationFn: async (todoData: Todo) => {
-      return (await axios.post("http://localhost:3000/todo", todoData)).data as Promise<Todo>;
-    },
-    onSuccess(todoData: Todo) {
-      console.log(todoData.content);
-    },
-    onError(error: unknown) {
-      if (error instanceof AxiosError) {
-        if (error.response?.status === 401) {
-          console.log(error);
-          nav("/login");
-        }
-      }
-    },
-  });
+  const addTodo = useTodoMutation();
+
+  const { listId } = useParams();
+  const { isLoading, data, isError, error } = useListData(listId);
+  if (isError) {
+    return <h2>{error.message}</h2>;
+  }
+  if (isLoading) {
+    return <h2>loading....</h2>;
+  }
+
   return (
     <div className="flex flex-col items-center justify-center h-full p-5">
-      <ul className="flex-1 h-full">List</ul>
-      <div>
+      <ul className="flex-1 h-full">
+        {data?.todos.map((todo) => {
+          return <Todo todo={todo} key={todo.id} />;
+        })}
+      </ul>
+
+      <div className="mt-7">
         <input value={todoText} onChange={(e) => setTodo(e.target.value)} type="text" />
         <button onClick={handleAddTodo}>Add</button>
       </div>
@@ -39,16 +43,18 @@ function TodoList() {
   );
 
   function handleAddTodo() {
-    const todo: Todo = {
-      listId: "ux2bwlvd5st69fsfc72vthzj",
+    if (!data) return;
+
+    const todo: TodoType = {
+      id: undefined,
+      listId: data.id,
       content: todoText,
       completed: false,
       bookmarked: false,
+      createdAt: undefined,
+      modifiedAt: undefined,
     };
-    mutation.mutate(todo);
-    console.log(todoText);
+    addTodo.mutate(todo);
     setTodo("");
   }
 }
-
-export default TodoList;
