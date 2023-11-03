@@ -1,12 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
 import { useState } from "react";
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, Navigate } from "react-router-dom";
 import { TodoType } from "../components/TodoList";
-type NameList = {
-  title: string;
-};
-
+import { useProfileData } from "../hooks/useProfileData";
+import { useDeleteList } from "../hooks/useDeleteList";
+import { useAddList } from "../hooks/useAddList";
+import { useListsData } from "../hooks/useListsData";
+import { useLogOut } from "../hooks/useLogOut";
 export type List = {
   id: string;
   title: string;
@@ -15,54 +14,31 @@ export type List = {
   todos: Array<TodoType>;
 };
 
-async function fetchLists() {
-  return (await axios.get("/api/lists", { withCredentials: true })).data as Promise<Array<List>>;
-}
-
 function Home() {
   const [showModal, setShowModal] = useState<boolean>(false);
   const [showList, setShowList] = useState<boolean>(false);
   const [listText, setListText] = useState<string>("");
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: async (title: NameList) => {
-      return (await axios.post("/api/list", title, { withCredentials: true }))
-        .data as Promise<NameList>;
-    },
-
-    onSuccess: (title: NameList) => {
-      queryClient.setQueryData(["lists"], (oldData: Array<List> | undefined) => [
-        title,
-        ...(oldData ?? []),
-      ]);
-      setListText("");
-    },
-  });
-  const listQuery = useQuery({ queryKey: ["lists"], queryFn: fetchLists });
-  const deleteList = useMutation({
-    mutationFn: async (id: string) => {
-      console.log(id);
-      await axios.delete(`/api/list/${id}`, { withCredentials: true });
-      return id;
-    },
-    onSuccess: (id: string) => {
-      queryClient.setQueryData(["lists"], (oldData: Array<List> | undefined) => {
-        const filterData = oldData?.filter((list) => list.id !== id);
-        return filterData;
-      });
-    },
+  const profileData = useProfileData();
+  const listsData = useListsData();
+  const DeleteList = useDeleteList();
+  const logOut = useLogOut();
+  const addListMutation = useAddList(function onSuccess() {
+    setListText("");
   });
 
-  if (mutation.isPending) {
-    return <h2>loading</h2>;
-  }
-  if (mutation.isError) {
-    return <div>An error occurred: {mutation.error.message}</div>;
+  if (profileData.status === "error") {
+    console.log(profileData.error);
+    return <Navigate to="/login" replace={true} />;
   }
 
   return (
     <section className="w-screen h-screen flex  ">
       <div className=" h-screen w-full max-w-xs relative p-5">
+        {profileData.status === "pending" ? (
+          <h2>Loading...</h2>
+        ) : (
+          <h2>{profileData.data.username}</h2>
+        )}
         <ul className="flex flex-col gap-2">
           <div className="collapse bg-base-200">
             <input
@@ -75,7 +51,7 @@ function Home() {
             <div className="collapse-title text-xl font-medium">Lists {showList ? "-" : "+"}</div>
 
             <div className="collapse-content flex flex-col gap-2 ">
-              {listQuery.data?.map((list) => {
+              {listsData.data?.map((list) => {
                 return (
                   <li key={list.id} className="flex gap-2 items-center w-full justify-between">
                     <Link to={`/home/lists/${list.id}`}>{list.title}</Link>
@@ -100,8 +76,21 @@ function Home() {
             </button>
           </div>
         )}
-        <button onClick={handleShowModal} className="absolute bottom-3 btn btn-neutral normal-case">
+        <button
+          onClick={handleShowModal}
+          className="absolute bottom-20 btn btn-neutral normal-case"
+        >
           New list
+        </button>
+
+        <button
+          onClick={() => {
+            logOut.mutate();
+          }}
+          className="flex gap-3  absolute bottom-3"
+        >
+          Log Out
+          <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAYCAYAAADgdz34AAAACXBIWXMAAAsTAAALEwEAmpwYAAAAhklEQVR4nO3VMQ7CMAxA0e6chXtQLkEnroXEpdjJHRj7UCpVYgiiCQmqgD95iP1lW1a67uvAHkE+Af0SQUnxmesSwURB5xN/wVNwajIiDKm4piByxiYnIVcQuWD7lsBrbjiuV5Ci6ohSfGLJw0N8qC5ofmgzGH9HEDT+cPr4sKQ4drmdr587VCZI8cn1PWcAAAAASUVORK5CYII="></img>
         </button>
       </div>
 
@@ -112,7 +101,7 @@ function Home() {
   );
 
   function handleAddNewList() {
-    mutation.mutate({ title: listText });
+    addListMutation.mutate({ title: listText });
   }
 
   function handleShowModal() {
@@ -120,8 +109,7 @@ function Home() {
   }
 
   function handleDeleteList(id: string) {
-    console.log(id);
-    deleteList.mutate(id);
+    DeleteList.mutate(id);
   }
 }
 
