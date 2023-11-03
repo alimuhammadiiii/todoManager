@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import Todo from "./Todo";
-import { useListData } from "../hooks/useLlistData";
+import { useListData } from "../hooks/useListData";
 import { useTodoMutation } from "../hooks/useTodo";
 
 export type TodoType = {
