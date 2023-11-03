@@ -10,8 +10,26 @@ import { UserContextProvider } from "./components/useUserInfo";
 import Lists from "./pages/Lists";
 import ImproveTodo from "./pages/ImproveTodo";
 import TodoList from "./components/TodoList";
+import { AxiosError } from "axios";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: (fetchNumber, error) => {
+        if (error instanceof AxiosError && error.response?.status === 401) {
+          queryClient.clear();
+          return false;
+        }
+
+        if (fetchNumber >= 3) {
+          return false;
+        }
+
+        return true;
+      },
+    },
+  },
+});
 function App() {
   return (
     <UserContextProvider>
